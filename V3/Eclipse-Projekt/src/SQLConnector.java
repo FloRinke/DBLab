@@ -2,6 +2,7 @@
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Properties;
 
 /**
  * JDBC Aufgabe 3a
@@ -22,7 +23,7 @@ import java.util.ArrayList;
  * Zur Lösung sollten nur an den markierten Stellen fehlende Codezeilen
  * ergänzt werden. Eine Änderung des Klassen-Interface ist nicht gestattet.
  * <p>
- * Jede Code-Lücke ist mit einem TODO markiert. Wo nicht vorgegeben, werden
+ * Jede Code-Lücke ist mit einem TO DO markiert. Wo nicht vorgegeben, werden
  * unabhängig von der Sichtbarkeit, JavaDoc Kommentare für alle Attribute und
  * Methoden erwartet. Wo es sinnvoll erscheint, sollte auch direkt im Code
  * kommentiert werden.
@@ -119,11 +120,20 @@ public abstract class SQLConnector {
      * (siehe auch Dokumentation des Datenbanktreibers)
      *  - Erstellt eine Verbindung mit Hilfe der Klassenvariablen.
      */
-    protected Connection getConnection() {
-        // TODO begin
-        return null;
-        // TODO end
-    }
+    protected Connection getConnection() throws SQLException {
+        try {
+            Class.forName(this.driverClassName);
+            } catch (ClassNotFoundException ex) {
+                System.out.println("Error: Unable to load driver class");
+            }
+
+        Connection conn = null;
+        Properties connectionProps = new Properties();
+        connectionProps.put("user", this.user);
+        connectionProps.put("password", this.password);
+        conn = DriverManager.getConnection(this.databaseURL, connectionProps);
+        return conn;
+        }
 
 
     /**
@@ -135,11 +145,11 @@ public abstract class SQLConnector {
      */
     public static SQLConnector getTestInstance() {
         return new
-                SQLConnectorOracleHsInternal()
-                // SQLConnectorOracleSsh()
-                //      SQLConnectorPostgreSqlLocal()
-                //		SQLConnectorMsSqlLocal()
-                //		LoginDatPostgreSqlPool()
+                //SQLConnectorOracleHsInternal()
+                //SQLConnectorOracleHsTunneled()
+                SQLConnectorPostgreSqlLocal()
+                //SQLConnectorMsSqlLocal()
+                //LoginDatPostgreSqlPool()
                 ;
     }
 
@@ -151,13 +161,11 @@ public abstract class SQLConnector {
      */
     public static void main(String[] unused) throws SQLException {
         Connection connection = SQLConnector.getTestInstance().getConnection();
-
         if (null != connection && !connection.isClosed()) {
             System.out.println("Connection successfully established.");
         } else {
             System.err.println("Establishing the connection failed!");
         }
-
         connection.close();
     }
 }
@@ -166,30 +174,30 @@ public abstract class SQLConnector {
  * Ableitung von der Klasse SQLConnector für den Zugriff auf HS-interne Oracle-Instanz.
   */
 class SQLConnectorOracleHsInternal extends SQLConnector{
-	/**
-	 * Erstellt ein LoginData Objekt für Oracle und legt die Informationen in 
-	 * den Klassenvariablen ab. Für die einfache Lösung weisen Sie der jeweiligen
-	 * Klassen-Variable einfach den richtigen Wert zu.
-	 */
-	protected SQLConnectorOracleHsInternal() {
-		// Bitte auf Ihre Gruppe anpassen ...
-		this.databaseURL =     "jdbc:oracle:thin:@iwi-lkit-db-01:1521:LAB1";
-		this.user =            "dbpraxNn";  // TODO für Ihre Gruppe anpassen
-		this.password =        "dbpraxNn";  // TODO für Ihre Gruppe anpassen
-		this.driverClassName = "oracle.jdbc.OracleDriver";
-	}
+    /**
+     * Erstellt ein LoginData Objekt für Oracle und legt die Informationen in 
+     * den Klassenvariablen ab. Für die einfache Lösung weisen Sie der jeweiligen
+     * Klassen-Variable einfach den richtigen Wert zu.
+     */
+    protected SQLConnectorOracleHsInternal() {
+        // Bitte auf Ihre Gruppe anpassen ...
+        this.databaseURL =     "jdbc:oracle:thin:@iwi-lkit-db-01:1521:LAB1";
+        this.user =            System.getenv("groupuser");
+        this.password =        System.getenv("grouppass");
+        this.driverClassName = "oracle.jdbc.OracleDriver";
+        }
 }
+
 /**
  * Ableitung von SQLConnector für Zugriff auf lokale, PostgreSQL-Instanz auf Pool-Rechnern LI.137
  */
 class LoginDatPostgreSqlPool extends SQLConnector{
-	protected LoginDatPostgreSqlPool() {
-		this.databaseURL = "jdbc:postgresql://localhost:5432/dbprax";
-		this.user = "dbpraxNn";      // TODO für Ihre Gruppe anpassen
-		this.password = "dbpraxNn";  // TODO für Ihre Gruppe anpassen
-		this.driverClassName = "org.postgresql.Driver";
-	}
-
+    protected LoginDatPostgreSqlPool() {
+        this.databaseURL = "jdbc:postgresql://localhost:5432/dbprax";
+        this.user = System.getenv("groupuser");
+        this.password = System.getenv("grouppass");
+        this.driverClassName = "org.postgresql.Driver";
+        }
 }
 
 
@@ -200,8 +208,8 @@ class SQLConnectorPostgreSqlLocal extends SQLConnector{
 	protected SQLConnectorPostgreSqlLocal() {
 
 		this.databaseURL = "jdbc:postgresql://localhost:5432/bike";
-		this.user = "bike";
-		this.password = System.getenv("bikepwd"); // damit das nicht gedruckt wird ...
+		this.user = "postgres";
+		this.password = System.getenv("bikepwd");
 		this.driverClassName = "org.postgresql.Driver";
 		
 	}
@@ -211,5 +219,21 @@ class SQLConnectorPostgreSqlLocal extends SQLConnector{
 
 
 /** Weitere Ableitungen für eigene Test-Datenbanken */
-// TODO begin
-// TODO end
+
+/**
+ * Ableitung von der Klasse SQLConnector für den getunnelten Zugriff auf HS-interne Oracle-Instanz.
+  */
+class SQLConnectorOracleHsTunneled extends SQLConnector{
+    /**
+     * Erstellt ein LoginData Objekt für Oracle und legt die Informationen in
+     * den Klassenvariablen ab. Für die einfache Lösung weisen Sie der jeweiligen
+     * Klassen-Variable einfach den richtigen Wert zu.
+     */
+    protected SQLConnectorOracleHsTunneled() {
+        // Bitte auf Ihre Gruppe anpassen ...
+        this.databaseURL =     "jdbc:oracle:thin:@localhost:1521:LAB1";
+        this.user =            System.getenv("groupuser");
+        this.password =        System.getenv("grouppass");
+        this.driverClassName = "oracle.jdbc.OracleDriver";
+    }
+}
