@@ -58,6 +58,11 @@ public class CustomerSupplierRelations {
 	private PreparedStatement stmtKundeLieferanten;
 
 	/**
+	 * Ein Statement, das Lieferanten für alle Kunden listet.
+	 */
+	private PreparedStatement stmtAllKundeLieferanten;
+
+	/**
 	 * Konstruktor
      * <p>
 	 * Erstellen der Datenbankverbindung über SQLConnector.
@@ -67,8 +72,51 @@ public class CustomerSupplierRelations {
 	public CustomerSupplierRelations()
 			throws SQLException {
 
-		// TODO begin
-		// TODO end
+		// TO DO begin
+		connection = SQLConnector.getTestInstance().getConnection();
+		stmtKundeLieferanten = connection.prepareStatement(
+				"SELECT DISTINCT kunde.name, kunde.nr, lieferant.name, lieferant.nr" +
+				" FROM kunde" +
+				" JOIN auftrag ON auftrag.kundnr = kunde.nr" +
+				" JOIN auftragsposten ON auftragsposten.auftrnr = auftrag.auftrnr" +
+				" JOIN teilestamm ON teilestamm.teilnr = auftragsposten.teilnr" +
+				" JOIN lieferung ON lieferung.teilnr = teilestamm.teilnr" +
+				" LEFT OUTER JOIN lieferant ON lieferant.nr = lieferung.liefnr" +
+				" WHERE kunde.nr = ?");
+		stmtAllKundeLieferanten = connection.prepareStatement(
+				"SELECT DISTINCT kunde.name as kunde, kunde.nr as knr, lieferant.name as lieferant, lieferant.nr as lnr" +
+				" FROM kunde" +
+				" LEFT OUTER JOIN auftrag ON auftrag.kundnr = kunde.nr" +
+				" LEFT OUTER JOIN auftragsposten ON auftragsposten.auftrnr = auftrag.auftrnr" +
+				" LEFT OUTER JOIN teilestamm ON teilestamm.teilnr = auftragsposten.teilnr" +
+				" LEFT OUTER JOIN lieferung ON lieferung.teilnr = teilestamm.teilnr" +
+				" LEFT OUTER JOIN lieferant ON lieferant.nr = lieferung.liefnr" +
+				" WHERE NOT lieferung.liefnr IS NULL OR auftrag.auftrnr IS NULL OR 0=(" +
+				" 	SELECT COUNT(l.liefnr)" +
+				" 	FROM kunde kd" +
+				" 	LEFT OUTER JOIN auftrag a ON a.kundnr = kd.nr" +
+				" 	LEFT OUTER JOIN auftragsposten ap ON ap.auftrnr = a.auftrnr" +
+				" 	LEFT OUTER JOIN teilestamm ts ON ts.teilnr = ap.teilnr" +
+				" 	LEFT OUTER JOIN lieferung l ON l.teilnr = ts.teilnr" +
+				" 	WHERE kd.nr = kunde.nr" +
+				" )" +
+				" ORDER BY kunde.name");
+		// TO DO end
+	}
+	/**
+	 * Destruktor
+     * <p>
+	 * Auflösen der Datenbankverbindung über SQLConnector.
+	 *
+	 * @throws SQLException Falls ein Verbindungsaufbau oder ein Statement scheitert
+	 */
+	protected void Finalize() throws SQLException {
+		// TO DO begin
+		if(this.connection != null) {
+			this.connection.close();
+			System.out.println("Warning: Connection has not been closed, closing now");
+		}
+		// TO DO end
 	}
 
 	/**
@@ -86,7 +134,12 @@ public class CustomerSupplierRelations {
 	 */
 	public ResultSet getKundeLieferanten(int kdNr) throws SQLException {
 		// TODO begin
-		return null;
+		if (0 == kdNr) {
+			return this.stmtAllKundeLieferanten.executeQuery();
+		} else {
+			this.stmtKundeLieferanten.setInt(1, kdNr);
+			return this.stmtKundeLieferanten.executeQuery();
+		}
 		// TODO end
 	}
 
@@ -96,8 +149,10 @@ public class CustomerSupplierRelations {
 	 */
 	public void close() throws SQLException {
 		// Hinweis: Stellen Sie sicher, dass dies wirklich aufgerufen wird.
-		// TODO begin
-		// TODO end
+		// TO DO begin
+		this.connection.close();
+		this.connection = null;
+		// TO DO end
 	}
 
 	/**
@@ -117,8 +172,9 @@ public class CustomerSupplierRelations {
 		Output.resultToCsv(rs, System.out);
 
 		// Hinweis: schließen sie alle Ressourcen
-		// TODO begin
-		// TODO end
+		// TO DO begin
+		csr.close();
+		// TO DO end
 	}
 
 }
