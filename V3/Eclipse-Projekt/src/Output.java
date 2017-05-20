@@ -73,6 +73,83 @@ public class Output {
 		// Alles andere in Anführungszeichen
 		return true;
 	}
+	/**
+	 * Gibt den Names eines Typs (aus java.sql.Types) zurück.
+	 *
+	 * @param type Alle aus Types.*
+	 * @return Name des Typs.
+	 */
+	private static final String getTypeName(int type) {
+		switch (type) {
+			case Types.ARRAY:
+				return "ARRAY";
+			case Types.BINARY:
+				return "BINARY";
+			case Types.BLOB:
+				return "BLOB";
+			case Types.TINYINT:
+				return "TINYINT";
+			case Types.SMALLINT:
+				return "SMALLINT";
+			case Types.INTEGER:
+				return "INTEGER";
+			case Types.BIGINT:
+				return "BIGINT";
+			case Types.FLOAT:
+				return "FLOAT";
+			case Types.REAL:
+				return "REAL";
+			case Types.DOUBLE:
+				return "DOUBLE";
+			case Types.NUMERIC:
+				return "NUMERIC";
+			case Types.DECIMAL:
+				return "DECIMAL";
+			case Types.NULL:
+				return "NULL";
+			case Types.CLOB:
+				return "CLOB";
+			case Types.CHAR:
+				return "CHAR";
+			case Types.DATALINK:
+				return "DATALINK";
+			case Types.DISTINCT:
+				return "DISTINCT";
+			case Types.JAVA_OBJECT:
+				return "JAVA_OBJECT";
+			case Types.LONGVARCHAR:
+				return "LONGVARCHAR";
+			case Types.LONGVARBINARY:
+				return "LONGVARBINARY";
+			case Types.LONGNVARCHAR:
+				return "LONGNVARCHAR";
+			case Types.NCHAR:
+				return "NCHAR";
+			case Types.NCLOB:
+				return "NCLOB";
+			case Types.NVARCHAR:
+				return "NVARCHAR";
+			case Types.OTHER:
+				return "OTHER";
+			case Types.REF:
+				return "REF";
+			case Types.ROWID:
+				return "ROWID";
+			case Types.SQLXML:
+				return "SQLXML";
+			case Types.STRUCT:
+				return "STRUCT";
+			case Types.TIME:
+				return "TIME";
+			case Types.TIMESTAMP:
+				return "TIMESTAMP";
+			case Types.VARBINARY:
+				return "VARBINARY";
+			case Types.VARCHAR:
+				return "VARCHAR";
+		}
+		return "Unknown";
+	}
 
 	/**
 	 * Gibt eine gegebene ResultSet-Instanz im CSV-Format aus.
@@ -87,8 +164,35 @@ public class Output {
 	public static void resultToCsv(ResultSet rs, PrintStream out)
 			throws SQLException {
 
-		// TODO begin
-		// TODO end
+		// Ausgabe der Überschriften
+		ResultSetMetaData meta = rs.getMetaData();
+		int columns = meta.getColumnCount();
+		for (int column = 1; column <= columns; column++) {
+			if (column != 1) {
+				out.printf(";");
+			}
+			out.printf("\"%s\"", meta.getColumnLabel(column));
+		}
+		out.println();
+
+		// Ausgabe aller Zeilen aus ResultSet
+		int rows = 0;
+		while (rs.next()) {
+			for (int column = 1; column <= columns; column++) {
+				if (column != 1) {
+					out.printf(";");
+				}
+				String cell = rs.getString(column);
+				if (isQuotedType(meta.getColumnType(column))) {
+					out.printf("\"%s\"", (cell != null ? cell.trim() : ""));
+				} else {
+					out.printf("%s", (cell != null ? cell.trim() : ""));
+				}
+			}
+			rows++;
+			out.println();
+		}
+		out.printf("(%d rows)%n%n", rows);
 	}
 
 	/**
@@ -129,8 +233,13 @@ public class Output {
 		out.println();
 
 		// Zeile mit den Typen ausgeben
-		// TODO begin
-		// TODO end
+		for (int column = 1; column <= columns; column++) {
+			String cell = getTypeName(meta.getColumnType(column));
+			out.printf((column > 1 ? "| " : " ")
+					+ "%-" + width[column - 1]
+					+ "." + width[column - 1] + "s ", (cell != null ? cell : ""));
+		}
+		out.println();
 
 		// Ausgabe horizontaler Abstandhalter
 		for (int column = 1; column <= columns; column++) {
@@ -175,5 +284,4 @@ public class Output {
 		statement.close();
 		connection.close();
 	}
-
 }
