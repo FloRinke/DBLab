@@ -3,6 +3,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashMap;
+import java.util.LinkedList;
 
 /**
  * JDBC Aufgabe 3d
@@ -67,8 +69,9 @@ public class SQLUpdateManager  {
      *                      Statement scheitert
      */
     public SQLUpdateManager() throws SQLException {
-        // TODO begin
-        // TODO end
+        // TO DO begin
+        connection = SQLConnector.getTestInstance().getConnection();
+        // TO DO end
 
         if (!hasTable("farbe")) {
             update();
@@ -77,8 +80,9 @@ public class SQLUpdateManager  {
             System.err.println(err);
             throw new SQLException(err);
         }
-        // TODO begin
-        // TODO end
+        // TO DO begin
+        connection.close();
+        // TO DO end
     }
 
     /**
@@ -89,9 +93,16 @@ public class SQLUpdateManager  {
      * @throws SQLException Im Fall von Verbindungsproblemen
      */
     private boolean hasTable(String table) throws SQLException {
-        // TODO begin
+        // TO DO begin
+        ResultSet rs = connection.getMetaData().getTables(null, null, "%", null);
+        while (rs.next()) {
+            //System.out.println(rs.getString(3));
+            if (rs.getString(3).equals(table)) {
+                return true;
+            }
+        }
         return false;
-        // TODO end
+        // TO DO end
     }
 
     /**
@@ -111,8 +122,98 @@ public class SQLUpdateManager  {
      */
     private void update() throws SQLException {
         System.out.println("Updating database layout ...");
-
         // TODO begin
+        ResultSet rs;
+        //Geeignete Transaktions-Isolationsebene setzen ...
+        connection.setAutoCommit(false);
+        connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+        //Tabelle farbe anlegen
+        Statement stmt = connection.createStatement();
+        String queryCreate = "CREATE TABLE farbe" +
+                "(nr INTEGER NOT NULL," +
+                " name CHAR(10) NOT NULL," +
+                " rot REAL DEFAULT 0," +
+                " gruen REAL DEFAULT 0," +
+                " blau REAL DEFAULT 0," +
+                " PRIMARY KEY (nr)," +
+                " UNIQUE (name)," +
+                " CHECK ( rot BETWEEN 0.0 AND 1.0)," +
+                " CHECK ( gruen BETWEEN 0.0 AND 1.0)," +
+                " CHECK ( blau BETWEEN 0.0 AND 1.0)" +
+                ");";
+        //System.out.println(queryCreate);
+        stmt.execute(queryCreate);
+        stmt.execute("CREATE SEQUENCE farbe_nr_seq;");
+        stmt.execute("ALTER TABLE farbe ALTER nr SET DEFAULT NEXTVAL('farbe_nr_seq');");
+
+        //Vorhandene Farben von teilestamm.farbe in farbe.name kopieren
+        //RGB Werte zu farbe Einträgen setzen
+        rs = stmt.executeQuery("SELECT DISTINCT farbe FROM teilestamm WHERE NOT farbe IS NULL");
+        LinkedList<String> colors = new LinkedList<String>();
+        while(rs.next()) {
+            //System.out.println(rs.getString(1));
+            colors.add(rs.getString(1).trim());
+        }
+        rs.close();
+        for (String col : colors) {
+            String queryInsert = "INSERT INTO farbe (name) VALUES ('" + col + "');";
+            System.out.println(queryInsert);
+            stmt.execute(queryInsert);
+            String queryUpdate = null;
+            if (col.equals("rot")) {
+                System.out.println("Updating rot");
+                queryUpdate = "UPDATE farbe SET rot=1.0 WHERE name='rot'";
+                System.out.println(queryUpdate);
+                stmt.execute(queryUpdate);
+            } else if (col.equals("blau")) {
+                System.out.println("Updating blau");
+                queryUpdate = "UPDATE farbe SET blau=1.0 WHERE name='blau'";
+                System.out.println(queryUpdate);
+                stmt.execute(queryUpdate);
+            }
+            if (queryUpdate == null) {
+                stmt.execute(queryUpdate);
+            }
+        }
+
+        //In teilestamm die Spalte farbnr (als Foreign Key) anlegen
+        System.out.println("Adding foreign key column");
+        String queryUpdate = "ALTER TABLE teilestamm ADD farbnr INTEGER;" +
+                             "ALTER TABLE teilestamm ADD CONSTRAINT FK_farbnr FOREIGN KEY (farbnr) REFERENCES farbe (nr);";
+        stmt.execute(queryUpdate);
+
+        //Die Spalte teilestamm.farbnr mit Werten befüllen
+        System.out.println("Filling foreign key column with data");
+        HashMap<String, Integer> fkmap = new HashMap<String, Integer>();
+        rs = stmt.executeQuery("SELECT nr, name FROM farbe");
+        while(rs.next()) {
+            System.out.println("add " + rs.getString(2).trim() + ": " + rs.getInt(1));
+            fkmap.put(rs.getString(2).trim(), rs.getInt(1));
+        }
+        rs.close();
+        rs = stmt.executeQuery("SELECT teilnr,farbe FROM teilestamm WHERE NOT farbe IS NULL");
+        PreparedStatement stmtUpdate = connection.prepareStatement("UPDATE teilestamm SET farbnr=? WHERE teilnr=?;");
+        int result = 0;
+        while(rs.next()) {
+            //System.out.println("id(" + rs.getInt(1) +
+            //                  ")->farbnr(" + rs.getString(2).trim() +
+            //                  "," + fkmap.get(rs.getString(2).trim()) +
+            //                  ");");
+            stmtUpdate.setInt(1, fkmap.get(rs.getString(2).trim()));
+            stmtUpdate.setInt(2, rs.getInt(1));
+            result = stmtUpdate.executeUpdate();
+            if (result != 1) {
+                throw new SQLException("Unexpected number of results, aborting");
+            }
+            //System.out.println(result);
+        }
+
+        //Die Spalte teilestamm.farbe entfernen
+        System.out.println("Remove old column");
+        stmt.execute("ALTER TABLE teilestamm DROP COLUMN farbe;");
+
+        //Im Erfolgsfall Änderungen committen, sonst zurückrollen
+        connection.commit();
         // TODO end
     }
 

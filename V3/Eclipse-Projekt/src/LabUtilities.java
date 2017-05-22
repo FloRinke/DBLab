@@ -42,7 +42,7 @@ public class LabUtilities {
             boolean isMsSql = productName.equals("Microsoft SQL Server");
             Statement statement = this.connection.createStatement();
             int numStmts = 0;
-            for (String sqlString : this.readFileToSqlStrings("sql/hska_bike.sql")) {
+            for (String sqlString : this.readFileToSqlStrings("sql/hska_pgsql_bike.sql")) {
                 try {
                     if (isMsSql) {   // Microsoft does not know "DATE" operator ...
                         sqlString = sqlString.replace(", DATE '", ", '");
@@ -73,10 +73,10 @@ public class LabUtilities {
                             //new SQLConnectorMsSqlLocal(),
                             //new SQLConnectorMySqlLocal(),
                             //new SQLConnectorMySqlSsh(),
-                            new SQLConnectorOracleHsInternal(),
+                            //new SQLConnectorOracleHsInternal(),
                             //new SQLConnectorOracleSsh(),
-                            //new SQLConnectorPostgreSqlLocal(),
-                            new LoginDatPostgreSqlPool(),
+                            new SQLConnectorPostgreSqlLocal(),
+                            //new LoginDatPostgreSqlPool(),
                     };
             for (SQLConnector connector : SQLConnectors) {
                 Connection connection = connector.getConnection();
